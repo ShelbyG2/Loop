@@ -1,0 +1,28 @@
+{
+  "name": "loop-server",
+  "version": "1.0.0",
+  "description": "loop backend server",
+  "license": "ISC",
+  "author": "Shelbyg2",
+  "type": "module",
+  "main": "src/app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "nodemon src/app.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.58.0",
+    "chalk": "^5.6.2",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "dicebear": "^9.2.4",
+    "dotenv": "^17.2.2",
+    "express": "^5.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.18.2",
+    "socket.io": "^4.8.1"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.3"
+  }
+}

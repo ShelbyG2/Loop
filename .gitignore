@@ -1,0 +1,16 @@
+Client/node_modules/
+Server/node_modules/
+Client/.env
+Server/.env
+
+.DS_Store
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.pnp.*
+.pnp.json
+.idea/
+.vscode/
+dist/
+.github/
