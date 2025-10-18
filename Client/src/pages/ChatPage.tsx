@@ -2,8 +2,9 @@ import { useLocation, useParams } from "react-router-dom";
 import { ArrowLeft, Send } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useState, useEffect, useRef } from "react";
-import { useSocket } from "../hooks/useSocketIO";
-import toast from "react-hot-toast";
+import { io } from "socket.io-client";
+import { useAuth } from "../context/useAuth";
+import { useConversations } from "../hooks/ConversationsQuery";
 
 interface ParticipantType {
   id: string;
@@ -18,16 +19,19 @@ interface LocationState {
 interface Message {
   _id: string;
   sender: string;
+  receiver: string;
   content: string;
   createdAt: string;
 }
 
 const ChatPage = () => {
-  const socket = useSocket();
+  const { user } = useAuth();
+  const socket = io(import.meta.env.VITE_API_URL as string);
   const { conversationId } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
   const { participant } = location.state as LocationState;
+  const { invalidateConversations } = useConversations();
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
@@ -42,18 +46,41 @@ const ChatPage = () => {
   }, [messages]);
 
   useEffect(() => {
-    if (!socket) return;
+    // Listen for messages from other users
+    socket.on("message", (serverMessage) => {
+      // Only add the message if it's from the other user
+      if (serverMessage.sender !== user?.id) {
+        setMessages((prevMessages) => [...prevMessages, serverMessage]);
+      }
+    });
 
-    socket.on("new_message", (data) => {
+    // Listen for messages from server
+    socket.on("messageReceived", (serverMessage) => {
+      if (serverMessage.conversation === conversationId) {
+        setMessages((prevMessages) => [...prevMessages, serverMessage]);
+      }
+    });
+
+    // Listen for message errors
+    socket.on("messageError", (error) => {
+      console.error("Message error:", error);
+      // You could add toast notification here
+    });
+
+    // Listen for conversation updates
+    socket.on("conversationUpdated", (data) => {
       if (data.conversationId === conversationId) {
-        setMessages((prev) => [...prev, data.message]);
+        invalidateConversations(); // Refresh conversations list
       }
     });
 
     return () => {
-      socket.off("new_message");
+      socket.off("message");
+      socket.off("messageReceived");
+      socket.off("messageError");
+      socket.off("conversationUpdated");
     };
-  }, [socket, conversationId]);
+  }, [socket, user?.id, conversationId, invalidateConversations]);
 
   const handleBack = () => {
     navigate("/homepage");
@@ -61,17 +88,34 @@ const ChatPage = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!message.trim() || !socket) return;
+
+    if (!message.trim()) {
+      return;
+    }
 
     try {
-      socket.emit("send_message", {
+      const messageData = {
+        sender: user?.id,
+        receiver: participant.id,
+        content: message.trim(),
         conversationId,
-        content: message,
-      });
-      toast.success("Message sent");
+      };
+
+      // Update local messages immediately
+      setMessages((prevMessages) => [
+        ...prevMessages,
+        {
+          ...messageData,
+          _id: Date.now().toString(),
+          createdAt: new Date().toISOString(),
+        },
+      ]);
+
+      // Emit message to socket
+      socket.emit("message", messageData);
       setMessage("");
     } catch (error) {
-      console.error("Failed to send message:", error);
+      console.error("Error sending message:", error);
     }
   };
 
@@ -115,12 +159,12 @@ const ChatPage = () => {
             <div
               key={msg._id}
               className={`chat ${
-                msg.sender === participant.id ? "chat-start" : "chat-end"
+                msg.sender === user?.id ? "chat-end" : "chat-start"
               }`}
             >
               <div
                 className={`chat-bubble ${
-                  msg.sender !== participant.id ? "chat-bubble-primary" : ""
+                  msg.sender === user?.id ? "chat-bubble-primary" : ""
                 }`}
               >
                 {msg.content}

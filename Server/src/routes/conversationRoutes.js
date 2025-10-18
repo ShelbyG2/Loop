@@ -4,13 +4,15 @@ import { authMiddleware } from "../middleware/authMiddleware.js";
 import {
   createConvo,
   deleteConvo,
-  getConvo,
+  getUserConvos,
+  getConvoById,
   updateConvo,
 } from "../controller/conversationController.js";
 const router = express.Router();
 
 router.post("/createConvo", errorHandler, authMiddleware, createConvo);
-router.get("/getConvo", errorHandler, authMiddleware, getConvo);
+
+router.get("/userConversations", errorHandler, authMiddleware, getUserConvos);
 router.put(
   "/conversations/updateConvo",
   errorHandler,
@@ -24,4 +26,5 @@ router.delete(
   deleteConvo
 );
 
+router.get("/:conversationId", errorHandler, authMiddleware, getConvoById);
 export default router;

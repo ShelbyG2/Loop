@@ -1,3 +1,4 @@
+import { Conversation } from "../models/Conversation.model.js";
 import { Message } from "../models/Message.model.js";
 
 export const createMsg = async (req, res) => {
@@ -7,12 +8,30 @@ export const createMsg = async (req, res) => {
     if (!senderId || !receiverId || !content)
       return res.status(400).json({ message: "All fields are required!" });
 
+    //Create a new conversation if not exists between sender and receiver
+    const conversation = await Conversation.findOne({
+      participants: { $all: [senderId, receiverId] },
+    });
+    if (!conversation) {
+      await Conversation.create({
+        participants: [senderId, receiverId],
+      });
+    }
+
     const msg = await Message.create({
       sender: senderId,
       receiver: receiverId,
       content: content,
       isRead: false,
     });
+
+    // Update conversation with the new message
+    await Conversation.findOneAndUpdate(
+      { participants: { $all: [senderId, receiverId] } },
+      { $push: { messages: msg._id }, $set: { lastMessage: msg._id } },
+      { new: true }
+    );
+
     return res.status(201).json(msg);
   } catch (error) {
     res
@@ -74,11 +93,9 @@ export const updateMsg = async (req, res) => {
     );
     return res.status(200).json(updateMsg);
   } catch (error) {
-    res
-      .status(500)
-      .json({
-        message: "An error occurred when updating your message",
-        error: error.message,
-      });
+    res.status(500).json({
+      message: "An error occurred when updating your message",
+      error: error.message,
+    });
   }
 };

@@ -16,6 +16,8 @@ import { authMiddleware } from "./middleware/authMiddleware.js";
 import { refreshTokenMiddleware } from "./middleware/refreshTokenMiddleWare.js";
 import { Message } from "./models/Message.model.js";
 import { Conversation } from "./models/Conversation.model.js";
+import supabase from "./config/supabaseConfig.js";
+import { User } from "./models/User.model.js";
 
 dotenv.config();
 connectDB();
@@ -56,38 +58,41 @@ app.use("/api/conversations", conversatRoutes);
 app.use("/api/messages", msgRoutes);
 
 io.on("connection", (socket) => {
-  socket.on("authenticate", async (token) => {
+  console.log("User connected:", socket.id);
+
+  socket.on("message", async (messageData) => {
     try {
-      const user = await verifyToken(token);
-      socket.userId = user._id;
-      socket.join(user._id.toString());
+      // Save message to database
+      const newMessage = new Message({
+        sender: messageData.sender,
+        receiver: messageData.receiver,
+        content: messageData.content,
+        conversation: messageData.conversationId,
+      });
+
+      const savedMessage = await newMessage.save();
+
+      // Update conversation last message
+      await Conversation.findByIdAndUpdate(messageData.conversationId, {
+        lastMessage: savedMessage._id,
+        updatedAt: new Date(),
+      });
+
+      // Emit message to both sender and receiver
+      io.emit("messageReceived", savedMessage);
+
+      // Emit conversation update
+      io.emit("conversationUpdated", {
+        conversationId: messageData.conversationId,
+        lastMessage: savedMessage,
+      });
     } catch (error) {
-      socket.disconnect();
+      console.error("Error saving message:", error);
+      socket.emit("messageError", { error: "Failed to save message" });
     }
   });
 
-  // Handle new message
-  socket.on("send_message", async (data) => {
-    try {
-      const { conversationId, content } = data;
-      const newMessage = await Message.create({
-        sender: socket.userId,
-        conversation: conversationId,
-        content,
-      });
-      console.log(newMessage);
-
-      const conversation = await Conversation.findById(conversationId);
-      conversation.participants.forEach((participantId) => {
-        io.to(participantId.toString()).emit("new_message", {
-          message: newMessage,
-          conversationId,
-        });
-      });
-    } catch (error) {
-      console.error("Message send error:", error);
-    }
+  socket.on("disconnect", () => {
+    console.log("User disconnected:", socket.id);
   });
 });
-
-export { io };
