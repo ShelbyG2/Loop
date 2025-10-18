@@ -1,5 +1,7 @@
 import { Conversation } from "../models/Conversation.model.js";
 import { Message } from "../models/Message.model.js";
+import { socketService } from "../services/socket.service";
+import { notificationService } from "../services/notifications.service";
 
 export const createMsg = async (req, res) => {
   try {
@@ -17,7 +19,7 @@ export const createMsg = async (req, res) => {
         participants: [senderId, receiverId],
       });
     }
-
+    const conversationId = conversation ? conversation._id : null;
     const msg = await Message.create({
       sender: senderId,
       receiver: receiverId,
@@ -31,6 +33,18 @@ export const createMsg = async (req, res) => {
       { $push: { messages: msg._id }, $set: { lastMessage: msg._id } },
       { new: true }
     );
+    socketService.emitConversationUpdate(conversationId, {
+      type: "NEW_MESSAGE",
+      message: msg,
+    });
+
+    if (!socketService.onlineUsers.has(receiverId)) {
+      await notificationService.createNotification(receiverId, "NEW_MESSAGE", {
+        senderId,
+        conversationId,
+        messagePreview: content.substring(0, 20),
+      });
+    }
 
     return res.status(201).json(msg);
   } catch (error) {

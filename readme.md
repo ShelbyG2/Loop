@@ -9,6 +9,7 @@ A modern, full-stack chat application built with React, TypeScript, and Node.js.
 - 👥 User profiles with customizable avatars
 - 🌓 Modern UI with DaisyUI components
 - 📱 Fully responsive design
+- 🔔 Push Notifications for new messages
 
 ## 🛠 Tech Stack
 
@@ -150,7 +151,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 👥 Authors
 
-- Your Name - Initial work - [GitHub](https://github.com/yourusername)
+- Joseph Njenga - Initial work - [GitHub](https://github.com/shelbyg2)
 
 ---
 
