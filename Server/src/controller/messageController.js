@@ -1,7 +1,7 @@
 import { Conversation } from "../models/Conversation.model.js";
 import { Message } from "../models/Message.model.js";
-import { socketService } from "../services/socket.service";
-import { notificationService } from "../services/notifications.service";
+import socketService from "../services/socket.service.js";
+import { notificationService } from "../services/notifications.service.js";
 
 export const createMsg = async (req, res) => {
   try {

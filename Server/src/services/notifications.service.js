@@ -1,4 +1,4 @@
-import socketService from "./socket.service";
+import socketService from "./socket.service.js";
 
 class NotificationService {
   async createNotification(userId, type, data) {

@@ -1,31 +1,41 @@
 import supabase from "../config/supabaseConfig.js";
 
-import { User } from "../models/User.model.js";
+export const verifyToken = async (token) => {
+  try {
+    const {
+      data: { user },
+      error,
+    } = await supabase.auth.getUser(token);
+
+    if (error) {
+      throw error;
+    }
+
+    return user;
+  } catch (error) {
+    console.error("Token verification error:", error);
+    return null;
+  }
+};
 
 export const authMiddleware = async (req, res, next) => {
   try {
-    const token = req.cookies.auth_token;
+    const token = req.headers.authorization?.split(" ")[1];
 
     if (!token) {
       return res.status(401).json({ message: "No token provided" });
     }
 
-    const {
-      data: { user: supabaseUser },
-      error,
-    } = await supabase.auth.getUser(token);
+    const user = await verifyToken(token);
 
-    if (error) {
-      return next();
+    if (!user) {
+      return res.status(401).json({ message: "Invalid token" });
     }
 
-    const mongoUser = await User.findOne({ supabaseId: supabaseUser.id });
-    req.user = mongoUser;
-
+    req.user = user;
     next();
   } catch (error) {
-    return res
-      .status(500)
-      .json({ message: "Auth error", error: error.message });
+    console.error("Auth middleware error:", error);
+    res.status(401).json({ message: "Authentication failed" });
   }
 };

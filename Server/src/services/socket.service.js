@@ -1,5 +1,5 @@
 import { Server } from "socket.io";
-import { verifyToken } from "../middleware/authMiddleware";
+import { verifyToken } from "../middleware/authMiddleware.js";
 
 class SocketService {
   constructor() {
@@ -71,6 +71,7 @@ class SocketService {
       socket.leave(conversationId);
     });
   }
+
   handleDisconnection(socket) {
     socket.on("disconnect", () => {
       const userId = socket.user._id;
@@ -93,4 +94,5 @@ class SocketService {
   }
 }
 
-export const socketService = new SocketService();
+const socketService = new SocketService();
+export default socketService;
