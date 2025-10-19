@@ -8,16 +8,28 @@ class SocketService {
   }
   initialize(server) {
     this.io = new Server(server, {
-      cors: { origin: process.env.CLIENT_URL, methods: ["GET", "POST"] },
+      cors: {
+        origin: process.env.CLIENT_URL,
+        methods: ["GET", "POST"],
+        credentials: true,
+      },
+      cookie: {
+        name: "auth_token",
+        httpOnly: true,
+        sameSite: "strict",
+        secure: process.env.NODE_ENV === "production",
+      },
     });
     this.io.use(async (socket, next) => {
       try {
-        const token = socket.handshake.auth.token;
+        const token = socket.handshake.headers.token;
         const user = await verifyToken(token);
         socket.user = user;
+        console.log(token);
         next();
       } catch (error) {
         next(new Error("Authentication error"));
+        console.log("Socket authentication error:", error);
       }
     });
 

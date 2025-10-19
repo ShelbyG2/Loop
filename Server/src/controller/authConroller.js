@@ -1,11 +1,18 @@
 import { User } from "../models/User.model.js";
 import supabase from "../config/supabaseConfig.js";
-import jwt from "jsonwebtoken";
+import { createError } from "../utils/errorUtils.js";
 import {
   setTokenCookie,
   setRefreshTokenCookie,
   clearCookies,
 } from "../utils/cookieUtils.js";
+
+// Validation helper
+const validateEmail = (email) => {
+  return String(email)
+    .toLowerCase()
+    .match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/);
+};
 
 export const Signup = async (req, res) => {
   try {
@@ -71,52 +78,56 @@ export const Signup = async (req, res) => {
   }
 };
 
-export const SignIn = async (req, res) => {
+export const SignIn = async (req, res, next) => {
   try {
     const { email, password } = req.body;
-    console.log("Login attempt for:", email);
 
+    // Input validation
     if (!email || !password) {
-      return res.status(400).json({ message: "All fields are required" });
+      throw createError(400, "Email and password are required");
     }
 
+    if (!validateEmail(email)) {
+      throw createError(400, "Invalid email format");
+    }
+
+    // Authentication
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
 
     if (error) {
-      console.error("Supabase auth error:", error);
-      return res.status(401).json({ message: error.message });
+      throw createError(401, error.message);
     }
 
-    console.log("Supabase auth successful");
-
-    const user = await User.findOne({ supabaseId: data.user.id });
+    // Find user in MongoDB
+    const user = await User.findOne({ supabaseId: data.user.id })
+      .select("-__v")
+      .lean();
 
     if (!user) {
-      console.error("User not found in MongoDB");
-      return res.status(404).json({ message: "User not found" });
+      throw createError(404, "User account not found");
     }
 
+    // Set auth cookies
     setTokenCookie(res, data.session.access_token, data.session.expires_in);
     setRefreshTokenCookie(res, data.session.refresh_token);
 
+    // Send response
     return res.status(200).json({
+      status: "success",
       message: "Login successful",
       user: {
         id: user._id,
         email: user.email,
         username: user.username,
         isVerified: user.isVerified,
+        profilePic: user.profilePic,
       },
     });
   } catch (error) {
-    console.error("Login error:", error);
-    return res.status(500).json({
-      message: "Internal server error",
-      error: error.message,
-    });
+    next(error);
   }
 };
 
@@ -192,45 +203,51 @@ export const EmailVerification = async (req, res) => {
   }
 };
 
-export const handleOAuth = async (req, res) => {
+export const handleOAuth = async (req, res, next) => {
   try {
     const { access_token, refresh_token, provider } = req.body;
 
     if (!access_token || !provider) {
-      return res.status(400).json({
-        message: "Missing authentication details",
-      });
+      throw createError(400, "Missing authentication details");
     }
 
+    // Verify token with Supabase
     const {
       data: { user },
       error: authError,
     } = await supabase.auth.getUser(access_token);
 
     if (authError) {
-      console.error("Supabase OAuth error:", authError);
-      return res.status(401).json({
-        message: "Invalid authentication token",
-      });
+      throw createError(401, "Invalid authentication token");
     }
 
-    let dbUser = await User.findOne({ supabaseId: user.id });
+    // Find or create user
+    let dbUser = await User.findOneAndUpdate(
+      { supabaseId: user.id },
+      {
+        $setOnInsert: {
+          username: user.user_metadata.full_name || user.email.split("@")[0],
+          email: user.email,
+          isVerified: true,
+          profilePic: user.user_metadata.avatar_url || null,
+        },
+      },
+      {
+        new: true,
+        upsert: true,
+        lean: true,
+      }
+    );
 
-    if (!dbUser) {
-      dbUser = await User.create({
-        username: user.user_metadata.full_name || user.email.split("@")[0],
-        email: user.email,
-        supabaseId: user.id,
-        isVerified: true,
-        profilePic: null,
-      });
-      await dbUser.save();
-    }
+    // Set cookies
     setTokenCookie(res, access_token, 3600);
     if (refresh_token) {
       setRefreshTokenCookie(res, refresh_token);
     }
+
+    // Send response
     res.status(200).json({
+      status: "success",
       message: "Authentication successful",
       user: {
         id: dbUser._id,
@@ -240,14 +257,8 @@ export const handleOAuth = async (req, res) => {
         profilePic: dbUser.profilePic,
       },
     });
-
-    return;
   } catch (error) {
-    console.log(error);
-    return res.status(500).json({
-      message: "Authentication failed",
-      error: error.message,
-    });
+    next(error);
   }
 };
 

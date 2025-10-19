@@ -7,38 +7,42 @@ import AuthCallbackPage from "./pages/AuthCallbackPage";
 import { AuthProvider } from "./context/AuthContextProvider";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import ChatPage from "./pages/ChatPage";
+import { SocketProvider } from "./context/SocketContext";
+
 const queryClient = new QueryClient();
 function App() {
   return (
     <AuthProvider>
-      <QueryClientProvider client={queryClient}>
-        <div className="w-full">
-          <Toaster position="top-center" />
-          <Routes>
-            <Route path="/" element={<AuthPage />} />
-            <Route path="/verification" element={<AuthCallbackPage />} />
+      <SocketProvider>
+        <QueryClientProvider client={queryClient}>
+          <div className="w-full">
+            <Toaster position="top-center" />
+            <Routes>
+              <Route path="/" element={<AuthPage />} />
+              <Route path="/verification" element={<AuthCallbackPage />} />
 
-            <Route
-              path="/homepage"
-              element={
-                <ProtectedRoute>
-                  <HomePage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/chat/:conversationId"
-              element={
-                <ProtectedRoute>
-                  <ChatPage />
-                </ProtectedRoute>
-              }
-            />
+              <Route
+                path="/homepage"
+                element={
+                  <ProtectedRoute>
+                    <HomePage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/chat/:conversationId"
+                element={
+                  <ProtectedRoute>
+                    <ChatPage />
+                  </ProtectedRoute>
+                }
+              />
 
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </div>
-      </QueryClientProvider>
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </div>
+        </QueryClientProvider>
+      </SocketProvider>
     </AuthProvider>
   );
 }

@@ -5,34 +5,67 @@ interface CookieOptions {
   sameSite?: "strict" | "lax" | "none";
 }
 
+interface AuthStatus {
+  isAuthenticated: boolean;
+  error?: string;
+}
+
 class CookieService {
-  private getCookieValue(name: string): string | null {
+  getCookie(name: string): string | null {
     const match = document.cookie.match(
       new RegExp("(^| )" + name + "=([^;]+)")
     );
     return match ? decodeURIComponent(match[2]) : null;
   }
 
+  setCookie(name: string, value: string, options: CookieOptions = {}) {
+    const defaultOptions: CookieOptions = {
+      path: "/",
+      secure: true,
+      sameSite: "strict",
+    };
+
+    const cookieOptions = { ...defaultOptions, ...options };
+    let cookieString = `${name}=${encodeURIComponent(value)}`;
+
+    if (cookieOptions.path) cookieString += `;path=${cookieOptions.path}`;
+    if (cookieOptions.domain) cookieString += `;domain=${cookieOptions.domain}`;
+    if (cookieOptions.secure) cookieString += ";secure";
+    if (cookieOptions.sameSite)
+      cookieString += `;samesite=${cookieOptions.sameSite}`;
+
+    document.cookie = cookieString;
+  }
+
+  deleteCookie(name: string) {
+    this.setCookie(name, "", { path: "/" });
+  }
+
   get authToken(): string | null {
-    return this.getCookieValue("auth_token");
+    return this.getCookie("auth_token");
   }
 
   get refreshToken(): string | null {
-    return this.getCookieValue("refresh_token");
+    return this.getCookie("refresh_token");
   }
 
-  isAuthenticated(): boolean {
-    const token = this.authToken;
-    if (!token) return false;
+  /**
+   * Check if HTTP-only cookie exists and is valid
+   */
+  isAuthenticated(): AuthStatus {
+    const cookieString = document.cookie;
+    const hasAuthCookie = cookieString.includes("auth_token=");
 
-    try {
-      // Basic JWT expiration check
-      const payload = JSON.parse(atob(token.split(".")[1]));
-      const expiry = payload.exp * 1000; // Convert to milliseconds
-      return Date.now() < expiry;
-    } catch {
-      return false;
+    if (!hasAuthCookie) {
+      return {
+        isAuthenticated: false,
+        error: "No authentication cookie found",
+      };
     }
+
+    return {
+      isAuthenticated: true,
+    };
   }
 }
 

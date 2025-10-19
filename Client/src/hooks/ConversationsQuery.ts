@@ -17,23 +17,30 @@ interface Conversation {
   updatedAt: string;
 }
 
+interface ConversationsResponse {
+  conversations: Conversation[];
+  pagination: {
+    current: number;
+    total: number;
+    hasMore: boolean;
+  };
+}
+
 export const useConversations = () => {
-  const {
-    data: conversations,
-    isLoading,
-    isError,
-    error,
-    refetch,
-  } = useQuery<Conversation[], Error>({
+  const { data, isLoading, isError, error, refetch } = useQuery<
+    ConversationsResponse,
+    Error
+  >({
     queryKey: ["conversations"],
     queryFn: async () => {
-      const response = await api.get("/api/conversations/getConvo");
+      const response = await api.get("/api/conversations/userConversations");
       return response.data;
     },
   });
 
   return {
-    conversations,
+    conversations: data?.conversations ?? [],
+    pagination: data?.pagination,
     isLoading,
     isError,
     error,

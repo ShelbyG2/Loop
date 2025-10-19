@@ -1,7 +1,15 @@
 import supabase from "../config/supabaseConfig.js";
+import { User } from "../models/User.model.js";
+import { createError } from "../utils/errorUtils.js";
+import { authCache } from "../utils/cacheUtils.js";
 
 export const verifyToken = async (token) => {
   try {
+    const cachedUser = authCache.get(token);
+    if (cachedUser) {
+      return cachedUser.data;
+    }
+
     const {
       data: { user },
       error,
@@ -10,6 +18,8 @@ export const verifyToken = async (token) => {
     if (error) {
       throw error;
     }
+
+    authCache.set(token, user);
 
     return user;
   } catch (error) {
@@ -20,22 +30,40 @@ export const verifyToken = async (token) => {
 
 export const authMiddleware = async (req, res, next) => {
   try {
-    const token = req.headers.authorization?.split(" ")[1];
+    const token = extractToken(req);
 
     if (!token) {
-      return res.status(401).json({ message: "No token provided" });
+      throw createError(401, "Authentication token missing");
     }
 
-    const user = await verifyToken(token);
+    const supabaseUser = await verifyToken(token);
 
+    if (!supabaseUser) {
+      throw createError(401, "Invalid or expired authentication token");
+    }
+    const user = await User.findOne(
+      { supabaseId: supabaseUser.id },
+      "-__v -createdAt -updatedAt"
+    ).lean();
     if (!user) {
-      return res.status(401).json({ message: "Invalid token" });
+      throw createError(401, "User not found");
     }
 
     req.user = user;
+    setAuthHeaders(res);
     next();
   } catch (error) {
-    console.error("Auth middleware error:", error);
-    res.status(401).json({ message: "Authentication failed" });
+    next(createError(401, error?.message || "Authentication failed"));
   }
+};
+
+const extractToken = (req) => {
+  return req.cookies?.auth_token || req.headers?.authorization?.split(" ")[1];
+};
+const setAuthHeaders = (res) => {
+  res.set({
+    "Cache-Control": " private, no-cache, no-store, must-revalidate",
+    Expires: " -1",
+    Pragma: " no-cache",
+  });
 };

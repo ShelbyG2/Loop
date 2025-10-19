@@ -22,7 +22,6 @@ const HomePage = () => {
   const [users, setUsers] = useState<User[]>([]);
   const navigate = useNavigate();
 
-  // Use the conversations query hook
   const {
     conversations,
     isLoading: conversationsLoading,
@@ -96,9 +95,16 @@ const HomePage = () => {
           <div className="alert alert-error">
             <p>{error?.message || "Failed to load conversations"}</p>
           </div>
+        ) : !conversations || conversations.length === 0 ? (
+          <div className="text-center py-10">
+            <p className="text-gray-500">No conversations yet</p>
+            <button className="btn btn-primary mt-4" onClick={fetchUsers}>
+              Start a conversation
+            </button>
+          </div>
         ) : (
           <div className="space-y-2">
-            {conversations?.map((conversation) => {
+            {conversations.map((conversation) => {
               const otherParticipant = conversation.participants.find(
                 (p) => p._id !== conversation.participants[0]._id
               );
