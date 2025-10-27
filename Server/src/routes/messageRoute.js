@@ -5,11 +5,10 @@ import {
   getMsg,
   updateMsg,
 } from "../controller/messageController.js";
-import { authMiddleware } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
-router.post("/createmsg", authMiddleware, createMsg);
-router.delete("/deletemsg/:messageId", authMiddleware, deleteMsg);
-router.get("/getmsg:messageId", authMiddleware, getMsg);
-router.put("/updatemsg/:messageId", authMiddleware, updateMsg);
+router.post("/createmsg", createMsg);
+router.delete("/deletemsg/:messageId", deleteMsg);
+router.get("/getmsg:messageId", getMsg);
+router.put("/updatemsg/:messageId", updateMsg);
 export default router;

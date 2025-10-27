@@ -17,11 +17,17 @@ interface ClientToServerEvents {
   "conversation:leave": (conversationId: string) => void;
 }
 
+interface SocketError {
+  message: string;
+}
+
 class SocketService {
   private socket: Socket<ServerToClientEvents, ClientToServerEvents> | null =
     null;
   private readonly SOCKET_URL =
     import.meta.env.VITE_API_URL || "http://localhost:3000";
+  private reconnectAttempts = 0;
+  private readonly MAX_RECONNECT_ATTEMPTS = 5;
 
   connect() {
     if (this.socket?.connected) return;
@@ -35,7 +41,7 @@ class SocketService {
       withCredentials: true,
       autoConnect: false,
       reconnection: true,
-      reconnectionAttempts: 5,
+      reconnectionAttempts: this.MAX_RECONNECT_ATTEMPTS,
       reconnectionDelay: 1000,
     });
 
@@ -45,19 +51,49 @@ class SocketService {
     return this.socket;
   }
 
+  private async handleAuthError() {
+    try {
+      // Attempt to verify/refresh authentication
+      const isValid = await cookieService.verifyAuth();
+      if (isValid && !this.socket?.connected) {
+        // Retry connection if auth is valid but socket is disconnected
+        this.socket?.connect();
+      }
+    } catch (error) {
+      console.error("Auth verification failed:", error);
+      // Maybe trigger a logout or auth refresh
+      window.dispatchEvent(new CustomEvent("auth:required"));
+    }
+  }
+
   private setupEventListeners() {
     if (!this.socket) return;
 
     this.socket.on("connect", () => {
-      console.log("Socket connected:", this.socket?.id);
+      console.log("Socket connected successfully");
+      this.reconnectAttempts = 0;
     });
 
     this.socket.on("connect_error", (error) => {
       console.error("Socket connection error:", error);
+      this.reconnectAttempts++;
+
+      if (this.reconnectAttempts >= this.MAX_RECONNECT_ATTEMPTS) {
+        this.handleAuthError();
+      }
     });
 
     this.socket.on("disconnect", (reason) => {
       console.log("Socket disconnected:", reason);
+    });
+
+    this.socket.on("force_disconnect", (data: { reason: string }) => {
+      console.log("Forced disconnection:", data.reason);
+      this.disconnect();
+    });
+
+    this.socket.on("error", (error: SocketError) => {
+      console.error("Socket error:", error.message);
     });
   }
 

@@ -8,16 +8,16 @@ import userRoutes from "./routes/userRoutes.js";
 import conversatRoutes from "./routes/conversationRoutes.js";
 import msgRoutes from "./routes/messageRoute.js";
 import cookieParser from "cookie-parser";
-import { Server } from "socket.io";
-
+import redis from "./config/redisConfig.js";
 import chalk from "chalk";
 import { updateLastSeen } from "./middleware/updateLastSeenMiddleware.js";
 import { authMiddleware } from "./middleware/authMiddleware.js";
 import { refreshTokenMiddleware } from "./middleware/refreshTokenMiddleWare.js";
-import socketService from "./services/socket.service.js";
+import socketService from "./services/Socket/index.socket.service.js";
 
 dotenv.config();
 connectDB();
+
 const port = process.env.PORT;
 const app = express();
 app.use(cookieParser());
@@ -26,6 +26,7 @@ app.use(express.json());
 app.use(
   cors({
     origin: process.env.CLIENT_URL,
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     credentials: true,
   })
 );

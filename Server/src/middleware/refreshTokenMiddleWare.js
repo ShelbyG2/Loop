@@ -5,7 +5,7 @@ export const refreshTokenMiddleware = async (req, res, next) => {
   try {
     const refreshToken = req.cookies.refresh_token;
     const currentToken = req.cookies.auth_token;
-    console.log(refreshToken);
+
     const handleRefreshToken = async () => {
       const {
         data: { session },
@@ -22,9 +22,11 @@ export const refreshTokenMiddleware = async (req, res, next) => {
     };
     if (refreshToken && !currentToken) {
       const success = await handleRefreshToken();
+
       if (!success) {
         return res.status(401).json({ message: "Invalid refresh token" });
       }
+      console.log("Token refreshed successfully");
       return next();
     }
 

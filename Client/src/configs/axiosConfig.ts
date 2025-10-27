@@ -1,5 +1,4 @@
 import axios from "axios";
-import { supabase } from "./supabaseConfig";
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL,
@@ -8,8 +7,23 @@ const api = axios.create({
   headers: {
     "Content-Type": "application/json",
   },
+  // Add these to ensure cookies are always sent
+  xsrfCookieName: "XSRF-TOKEN",
+  xsrfHeaderName: "X-XSRF-TOKEN",
 });
 
+// Add request interceptor to always include credentials
+api.interceptors.request.use(
+  (config) => {
+    config.withCredentials = true;
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
+// Modify your response interceptor to handle refresh
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
@@ -17,26 +31,6 @@ api.interceptors.response.use(
 
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
-
-      try {
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
-
-        if (!session) {
-          window.location.href = "/";
-          return Promise.reject(error);
-        }
-
-        return api(originalRequest);
-      } catch (authError) {
-        console.error("Authentication error:", authError);
-
-        await supabase.auth.signOut();
-
-        window.location.href = "/";
-        return Promise.reject(authError);
-      }
     }
 
     return Promise.reject(error);

@@ -2,10 +2,11 @@ export class CacheManager {
   constructor(ttl = 5 * 60 * 1000) {
     this.cache = new Map();
     this.TTL = ttl;
+    this.hits = 0;
+    this.misses = 0;
     this.startCleanupInterval();
   }
 
-  // Add getter for TTL
   getTTL() {
     return this.TTL;
   }
@@ -26,7 +27,7 @@ export class CacheManager {
       return null;
     }
 
-    return item;
+    return item.data;
   }
 
   delete(key) {

@@ -2,7 +2,9 @@ export const setTokenCookie = (res, token, expiresIn) => {
   res.cookie("auth_token", token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
-    sameSite: "strict",
+    sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+    domain: process.env.COOKIE_DOMAIN,
+    path: "/",
     maxAge: expiresIn * 1000,
   });
 };
@@ -11,7 +13,9 @@ export const setRefreshTokenCookie = (res, refreshToken) => {
   res.cookie("refresh_token", refreshToken, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
-    sameSite: "strict",
+    sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+    domain: process.env.COOKIE_DOMAIN,
+    path: "/",
     maxAge: 7 * 24 * 60 * 60 * 1000,
   });
 };

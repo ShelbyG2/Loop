@@ -8,7 +8,6 @@ import {
   Logout,
 } from "../controller/authConroller.js";
 import { errorHandler } from "../middleware/errorHandler.js";
-import { authMiddleware } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
@@ -16,7 +15,7 @@ router.post("/register", errorHandler, Signup);
 router.post("/login", errorHandler, SignIn);
 router.post("/verify-email", errorHandler, EmailVerification);
 router.post("/oauth", errorHandler, handleOAuth);
-router.get("/me", authMiddleware, getMe);
-router.post("/logout", authMiddleware, errorHandler, Logout);
+router.get("/me", getMe);
+router.post("/logout", errorHandler, Logout);
 
 export default router;

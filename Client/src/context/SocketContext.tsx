@@ -1,22 +1,7 @@
-import {
-  createContext,
-  useContext,
-  useEffect,
-  useState,
-  ReactNode,
-} from "react";
+import { ReactNode, useEffect, useState } from "react";
 import { socketService } from "../services/socketService";
 import { useAuth } from "./useAuth";
-
-interface SocketContextType {
-  isConnected: boolean;
-  joinConversation: (conversationId: string) => void;
-  leaveConversation: (conversationId: string) => void;
-  sendMessage: (data: any) => void;
-  setTypingStatus: (conversationId: string, isTyping: boolean) => void;
-}
-
-const SocketContext = createContext<SocketContextType | undefined>(undefined);
+import { SocketContext } from "./socketContext";
 
 export const SocketProvider = ({ children }: { children: ReactNode }) => {
   const [isConnected, setIsConnected] = useState(false);
@@ -51,12 +36,4 @@ export const SocketProvider = ({ children }: { children: ReactNode }) => {
   return (
     <SocketContext.Provider value={value}>{children}</SocketContext.Provider>
   );
-};
-
-export const useSocket = () => {
-  const context = useContext(SocketContext);
-  if (context === undefined) {
-    throw new Error("useSocket must be used within a SocketProvider");
-  }
-  return context;
 };

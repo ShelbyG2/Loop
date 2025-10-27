@@ -23,6 +23,7 @@ export const Signup = async (req, res) => {
     const existingUserName = await User.find({
       username: { $regex: new RegExp(`^${username}$`, "i") },
     });
+    console.log(existingUserName);
     if (existingUserName)
       return res.status(400).json({ message: "Username already taken" });
     const { data: existingUser, error: searchError } =

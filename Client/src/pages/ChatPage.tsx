@@ -5,7 +5,7 @@ import { useState, useEffect, useRef } from "react";
 import { useAuth } from "../context/useAuth";
 import { useConversations } from "../hooks/ConversationsQuery";
 import { useChat } from "../hooks/useChat";
-import { useSocket } from "../context/SocketContext";
+import { useSocket } from "../context/socketContext";
 
 interface ParticipantType {
   id: string;

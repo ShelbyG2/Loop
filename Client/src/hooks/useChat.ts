@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { socketService } from "../services/socketService";
-import { useSocket } from "../context/SocketContext";
+import { useSocket } from "../context/socketContext";
 
 export const useChat = (conversationId: string) => {
   const [messages, setMessages] = useState<any[]>([]);
